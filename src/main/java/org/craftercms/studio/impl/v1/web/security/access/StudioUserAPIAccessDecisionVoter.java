@@ -1,10 +1,9 @@
 /*
- * Copyright (C) 2007-2019 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * it under the terms of the GNU General Public License version 3 as published by
+ * the Free Software Foundation.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -27,6 +26,8 @@ import net.sf.json.JSONObject;
 import org.apache.commons.fileupload.servlet.ServletFileUpload;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.craftercms.studio.api.v1.exception.ServiceLayerException;
+import org.craftercms.studio.api.v1.exception.security.UserNotFoundException;
 import org.craftercms.studio.api.v1.log.Logger;
 import org.craftercms.studio.api.v1.log.LoggerFactory;
 import org.craftercms.studio.api.v2.dal.User;
@@ -95,8 +96,9 @@ public class StudioUserAPIAccessDecisionVoter extends StudioAbstractAccessDecisi
             }
             User currentUser = null;
             try {
-                currentUser = (User) authentication.getPrincipal();
-            } catch (ClassCastException e) {
+                String username = authentication.getPrincipal().toString();
+                currentUser = userServiceInternal.getUserByIdOrUsername(-1, username);
+            } catch (ClassCastException | UserNotFoundException | ServiceLayerException e) {
                 // anonymous user
                 if (!authentication.getPrincipal().toString().equals("anonymousUser")) {
                     logger.info("Error getting current user", e);
@@ -138,7 +140,8 @@ public class StudioUserAPIAccessDecisionVoter extends StudioAbstractAccessDecisi
                     }
                     break;
                 case GET:
-                    if (currentUser != null && (isAdmin(currentUser) || isSelf(currentUser, userParam) || isSiteMember(currentUser, userParam))) {
+                    if (currentUser != null && (isAdmin(currentUser) || isSelf(currentUser, userParam) ||
+                            isSiteMember(currentUser, userParam))) {
                         toRet = ACCESS_GRANTED;
                     } else {
                         toRet = ACCESS_DENIED;

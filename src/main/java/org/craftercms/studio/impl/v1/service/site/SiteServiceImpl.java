@@ -83,7 +83,6 @@ import org.craftercms.studio.api.v1.repository.ContentRepository;
 import org.craftercms.studio.api.v1.repository.RepositoryItem;
 import org.craftercms.studio.api.v1.service.GeneralLockService;
 import org.craftercms.studio.api.v1.service.configuration.ServicesConfig;
-import org.craftercms.studio.api.v1.service.configuration.SiteEnvironmentConfig;
 import org.craftercms.studio.api.v1.service.content.ContentService;
 import org.craftercms.studio.api.v1.service.content.ContentTypeService;
 import org.craftercms.studio.api.v1.service.content.DmPageNavigationOrderService;
@@ -98,9 +97,7 @@ import org.craftercms.studio.api.v1.service.objectstate.TransitionEvent;
 import org.craftercms.studio.api.v1.service.security.SecurityService;
 import org.craftercms.studio.api.v1.service.site.SiteConfigNotFoundException;
 import org.craftercms.studio.api.v1.service.site.SiteService;
-import org.craftercms.studio.api.v1.to.EnvironmentConfigTO;
 import org.craftercms.studio.api.v1.to.PublishStatus;
-import org.craftercms.studio.api.v1.to.PublishingTargetTO;
 import org.craftercms.studio.api.v1.to.RemoteRepositoryInfoTO;
 import org.craftercms.studio.api.v1.to.SiteBlueprintTO;
 import org.craftercms.studio.api.v1.to.SiteTO;
@@ -154,7 +151,6 @@ import static org.craftercms.studio.api.v2.utils.StudioConfiguration.CONFIGURATI
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.CONFIGURATION_GLOBAL_CONFIG_BASE_PATH;
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.CONFIGURATION_GLOBAL_SYSTEM_SITE;
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.CONFIGURATION_SITE_CONFIG_BASE_PATH;
-import static org.craftercms.studio.api.v2.utils.StudioConfiguration.CONFIGURATION_SITE_ENVIRONMENT;
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.CONFIGURATION_SITE_PREVIEW_DESTROY_CONTEXT_URL;
 import static org.craftercms.studio.api.v2.utils.StudioConfiguration.JOB_DEPLOY_CONTENT_TO_ENVIRONMENT_STATUS_MESSAGE_DEFAULT;
 
@@ -172,7 +168,6 @@ public class SiteServiceImpl implements SiteService {
     protected SiteServiceDAL _siteServiceDAL;
     protected ServicesConfig servicesConfig;
     protected ContentService contentService;
-    protected SiteEnvironmentConfig environmentConfig;
     protected ContentRepository contentRepository;
     protected org.craftercms.studio.api.v2.repository.ContentRepository contentRepositoryV2;
     protected ObjectStateService objectStateService;
@@ -308,6 +303,7 @@ public class SiteServiceImpl implements SiteService {
 
 		Map<String, Object> toRet = null;
 		if (configContent != null) {
+            configContent = configContent.replaceAll("\"\\n([\\s]+)?+", "\" ");
 			configContent = configContent.replaceAll("\\n([\\s]+)?+", "");
 			configContent = configContent.replaceAll("<!--(.*?)-->", "");
 			toRet = convertNodesFromXml(configContent);
@@ -357,34 +353,6 @@ public class SiteServiceImpl implements SiteService {
 		}
 		return map;
 	}
-
-
-	/***
-	 * load site environment specific info
-	 *
-	 * @param site
-	 * @param siteConfig
-	 */
-	protected void loadSiteEnvironmentConfig(String site, SiteTO siteConfig) {
-		// get environment specific configuration
-		logger.debug("Loading site environment configuration for " + site + "; Environemnt: " + getEnvironment());
-		EnvironmentConfigTO environmentConfigTO = environmentConfig.getEnvironmentConfig(site);
-		if (environmentConfigTO == null) {
-			logger.error("Environment configuration for site " + site + " does not exist.");
-			return;
-		}
-		siteConfig.setLiveUrl(environmentConfigTO.getLiveServerUrl());
-		siteConfig.setAuthoringUrl(environmentConfigTO.getAuthoringServerUrl());
-		siteConfig.setPreviewUrl(environmentConfigTO.getPreviewServerUrl());
-		siteConfig.setAdminEmail(environmentConfigTO.getAdminEmailAddress());
-		siteConfig.setOpenSiteDropdown(environmentConfigTO.getOpenDropdown());
-	}
-
-    @Override
-    @ValidateParams
-    public List<PublishingTargetTO> getPublishingTargetsForSite(@ValidateStringParam(name = "site") String site) {
-        return environmentConfig.getPublishingTargetsForSite(site);
-    }
 
     @Override
     public Set<String> getAllAvailableSites() {
@@ -495,18 +463,7 @@ public class SiteServiceImpl implements SiteService {
                 logger.info("Syncing database with repository.");
                 syncDatabaseWithRepo(siteId, contentRepository.getRepoFirstCommitId(siteId), true);
 
-                // initial deployment
-                logger.info("Performing initial deployment");
-                List<PublishingTargetTO> publishingTargets = getPublishingTargetsForSite(siteId);
-                if (publishingTargets != null && publishingTargets.size() > 0) {
-                    for (PublishingTargetTO target : publishingTargets) {
-                        if (StringUtils.isNotEmpty(target.getRepoBranchName())) {
-                            contentRepository.initialPublish(siteId, sandboxBranch, target.getRepoBranchName(),
-                                    securityService.getCurrentUser(), "Create site.");
-                        }
-                    }
-                }
-                objectStateService.setStateForSiteContent(siteId, State.EXISTING_UNEDITED_UNLOCKED);
+                objectStateService.setStateForSiteContent(siteId, State.NEW_UNPUBLISHED_UNLOCKED);
 	        } catch(Exception e) {
 	            success = false;
 	            logger.error("Error while creating site: " + siteName + " ID: " + siteId + " from blueprint: " +
@@ -557,7 +514,9 @@ public class SiteServiceImpl implements SiteService {
         boolean success = true;
 
         // create site with git repo
-        contentRepository.createSiteFromBlueprint(blueprintLocation, siteId, sandboxBranch, params);
+        //contentRepository.createSiteFromBlueprint(blueprintLocation, siteId, sandboxBranch, params);
+
+        contentRepositoryV2.createSiteFromBlueprint(blueprintLocation, siteId, sandboxBranch, params);
 
 
         String siteConfigFolder = FILE_SEPARATOR + "config" + FILE_SEPARATOR + "studio";
@@ -751,7 +710,7 @@ public class SiteServiceImpl implements SiteService {
             // create site by cloning remote git repo
             logger.info("Creating site " + siteId + " by cloning remote repository " + remoteName +
                 " (" + remoteUrl + ")");
-            success = contentRepository.createSiteCloneRemote(siteId, sandboxBranch, remoteName, remoteUrl,
+            success = contentRepositoryV2.createSiteCloneRemote(siteId, sandboxBranch, remoteName, remoteUrl,
                 remoteBranch, singleBranch, authenticationType, remoteUsername, remotePassword, remoteToken,
                 remotePrivateKey, params, createAsOrphan);
 
@@ -796,7 +755,7 @@ public class SiteServiceImpl implements SiteService {
                 logger.error("Error while creating site: " + siteId + " ID: " + siteId + " as clone from" +
                              " remote repository: " + remoteName + " (" + remoteUrl + "). Rolling back...", e);
 
-                contentRepository.removeRemote(siteId, remoteName);
+                contentRepositoryV2.removeRemote(siteId, remoteName);
                 boolean deleted = contentRepository.deleteSite(siteId);
 
                 if (!deleted) {
@@ -842,18 +801,7 @@ public class SiteServiceImpl implements SiteService {
                 logger.info("Sync database with repository for site " + siteId);
                 syncDatabaseWithRepo(siteId, contentRepository.getRepoFirstCommitId(siteId), true);
 
-                // initial deployment
-                logger.info("Executing initial deployement for site " + siteId);
-                List<PublishingTargetTO> publishingTargets = getPublishingTargetsForSite(siteId);
-                if (publishingTargets != null && publishingTargets.size() > 0) {
-                    for (PublishingTargetTO target : publishingTargets) {
-                        if (StringUtils.isNotEmpty(target.getRepoBranchName())) {
-                            contentRepository.initialPublish(siteId, sandboxBranch, target.getRepoBranchName(),
-                                    securityService.getCurrentUser(), "Create site.");
-                        }
-                    }
-                }
-                objectStateService.setStateForSiteContent(siteId, State.EXISTING_UNEDITED_UNLOCKED);
+                objectStateService.setStateForSiteContent(siteId, State.NEW_UNPUBLISHED_UNLOCKED);
             } catch(Exception e) {
                 success = false;
                 logger.error("Error while creating site: " + siteId + " ID: " + siteId + " as clone from " +
@@ -985,7 +933,7 @@ public class SiteServiceImpl implements SiteService {
                         InvalidRemoteUrlException | ServiceLayerException e) {
                     logger.error("Error while pushing site: " + siteId + " ID: " + siteId + " to remote repository "
                             + remoteName + " (" + remoteUrl + ")", e);
-                    contentRepository.removeRemote(siteId, remoteName);
+                    contentRepositoryV2.removeRemote(siteId, remoteName);
                 }
 
             try {
@@ -1004,19 +952,7 @@ public class SiteServiceImpl implements SiteService {
                     logger.info("Sync database with repository for site " + siteId);
                     syncDatabaseWithRepo(siteId, contentRepository.getRepoFirstCommitId(siteId), true);
 
-                    // initial deployment
-                    logger.info("Executing initial deployement for site " + siteId);
-                    List<PublishingTargetTO> publishingTargets = getPublishingTargetsForSite(siteId);
-                    if (publishingTargets != null && publishingTargets.size() > 0) {
-                        for (PublishingTargetTO target : publishingTargets) {
-                            if (StringUtils.isNotEmpty(target.getRepoBranchName())) {
-                                contentRepository.initialPublish(siteId, sandboxBranch, target.getRepoBranchName(),
-                                        securityService.getCurrentUser(), "Create site.");
-                            }
-                        }
-                    }
-
-                    objectStateService.setStateForSiteContent(siteId, State.EXISTING_UNEDITED_UNLOCKED);
+                    objectStateService.setStateForSiteContent(siteId, State.NEW_UNPUBLISHED_UNLOCKED);
                 } catch (Exception e) {
                     success = false;
                     logger.error("Error while creating site: " + siteId + " ID: " + siteId + " from blueprint: " +
@@ -1169,43 +1105,6 @@ public class SiteServiceImpl implements SiteService {
 	}
 
     @Override
-    @ValidateParams
-    public String getPreviewServerUrl(@ValidateStringParam(name = "site") String site) {
-        return environmentConfig.getPreviewServerUrl(site);
-    }
-
-    @Override
-    @ValidateParams
-    public String getPreviewEngineServerUrl(@ValidateStringParam(name = "site") String site) {
-        return environmentConfig.getPreviewEngineServerUrl(site);
-    }
-
-    @Override
-    @ValidateParams
-    public String getGraphqlServerUrl(@ValidateStringParam(name = "site") String site) {
-        return environmentConfig.getGraphqlServerUrl(site);
-    }
-
-    @Override
-    @ValidateParams
-    public String getLiveServerUrl(@ValidateStringParam(name = "site") String site) {
-        return environmentConfig.getLiveServerUrl(site);
-    }
-
-    @Override
-    @ValidateParams
-    public String getAuthoringServerUrl(@ValidateStringParam(name = "site") String site) {
-        return environmentConfig.getAuthoringServerUrl(site);
-    }
-
-    @Override
-    @ValidateParams
-    public String getAdminEmailAddress(@ValidateStringParam(name = "site") String site) {
-        return environmentConfig.getAdminEmailAddress(site);
-    }
-
-
-    @Override
     public void reloadSiteConfigurations() {
         reloadGlobalConfiguration();
         Set<String> sites = getAllAvailableSites();
@@ -1223,8 +1122,6 @@ public class SiteServiceImpl implements SiteService {
         siteConfig.setSite(site);
         siteConfig.setEnvironment(getEnvironment());
         servicesConfig.reloadConfiguration(site);
-        environmentConfig.reloadConfiguration(site);
-        loadSiteEnvironmentConfig(site, siteConfig);
 		notificationService.reloadConfiguration(site);
         securityService.reloadConfiguration(site);
         contentTypeService.reloadConfiguration(site);
@@ -1315,6 +1212,7 @@ public class SiteServiceImpl implements SiteService {
                 Map<String, String> activityInfo = new HashMap<String, String>();
                 String contentClass;
                 Map<String, Object> properties;
+                ItemMetadata metadata;
                 switch (repoOperation.getAction()) {
                     case CREATE:
                     case COPY:
@@ -1332,13 +1230,16 @@ public class SiteServiceImpl implements SiteService {
                         if (!objectMetadataManager.metadataExist(site, repoOperation.getPath())) {
                             objectMetadataManager.insertNewObjectMetadata(site, repoOperation.getPath());
                         }
-                        properties = new HashMap<String, Object>();
-                        properties.put(ItemMetadata.PROP_SITE, site);
-                        properties.put(ItemMetadata.PROP_PATH, repoOperation.getPath());
-                        properties.put(ItemMetadata.PROP_MODIFIER, repoOperation.getAuthor());
-                        properties.put(ItemMetadata.PROP_MODIFIED, repoOperation.getDateTime());
-                        properties.put(ItemMetadata.PROP_COMMIT_ID, repoOperation.getCommitId());
-                        objectMetadataManager.setObjectMetadata(site, repoOperation.getMoveToPath(), properties);
+                        metadata = objectMetadataManager.getProperties(site, repoOperation.getPath());
+                        if (!StringUtils.equals(metadata.getCommitId(), repoOperation.getCommitId())) {
+                            properties = new HashMap<String, Object>();
+                            properties.put(ItemMetadata.PROP_SITE, site);
+                            properties.put(ItemMetadata.PROP_PATH, repoOperation.getPath());
+                            properties.put(ItemMetadata.PROP_MODIFIER, repoOperation.getAuthor());
+                            properties.put(ItemMetadata.PROP_MODIFIED, repoOperation.getDateTime());
+                            properties.put(ItemMetadata.PROP_COMMIT_ID, repoOperation.getCommitId());
+                            objectMetadataManager.setObjectMetadata(site, repoOperation.getMoveToPath(), properties);
+                        }
                         logger.debug("Extract dependencies for site: " + site + " path: " +
                                 repoOperation.getPath());
                         toReturn = toReturn && extractDependenciesForItem(site, repoOperation.getPath());
@@ -1357,14 +1258,16 @@ public class SiteServiceImpl implements SiteService {
                         if (!objectMetadataManager.metadataExist(site, repoOperation.getPath())) {
                             objectMetadataManager.insertNewObjectMetadata(site, repoOperation.getPath());
                         }
-                        properties = new HashMap<String, Object>();
-                        properties.put(ItemMetadata.PROP_SITE, site);
-                        properties.put(ItemMetadata.PROP_PATH, repoOperation.getPath());
-                        properties.put(ItemMetadata.PROP_MODIFIER, repoOperation.getAuthor());
-                        properties.put(ItemMetadata.PROP_MODIFIED, repoOperation.getDateTime());
-                        properties.put(ItemMetadata.PROP_COMMIT_ID, repoOperation.getCommitId());
-                        objectMetadataManager.setObjectMetadata(site, repoOperation.getMoveToPath(), properties);
-
+                        metadata = objectMetadataManager.getProperties(site, repoOperation.getPath());
+                        if (!StringUtils.equals(metadata.getCommitId(), repoOperation.getCommitId())) {
+                            properties = new HashMap<String, Object>();
+                            properties.put(ItemMetadata.PROP_SITE, site);
+                            properties.put(ItemMetadata.PROP_PATH, repoOperation.getPath());
+                            properties.put(ItemMetadata.PROP_MODIFIER, repoOperation.getAuthor());
+                            properties.put(ItemMetadata.PROP_MODIFIED, repoOperation.getDateTime());
+                            properties.put(ItemMetadata.PROP_COMMIT_ID, repoOperation.getCommitId());
+                            objectMetadataManager.setObjectMetadata(site, repoOperation.getMoveToPath(), properties);
+                        }
                         logger.debug("Extract dependencies for site: " + site + " path: " + repoOperation.getPath());
                         toReturn = toReturn && extractDependenciesForItem(site, repoOperation.getPath());
                         contentClass = contentService.getContentTypeClass(site, repoOperation.getPath());
@@ -1613,9 +1516,9 @@ public class SiteServiceImpl implements SiteService {
         logger.debug("Syncing database lastCommitId for site: " + site);
 
 	    // Update database
-        String lastCommitId = contentRepository.getRepoLastCommitId(site);
-        logger.debug("Update last commit id " + lastCommitId + " for site " + site);
-        updateLastCommitId(site, lastCommitId);
+        logger.debug("Update last commit id " + repoLastCommitId + " for site " + site);
+        updateLastCommitId(site, repoLastCommitId);
+        updateLastVerifiedGitlogCommitId(site, repoLastCommitId);
         // Sync all preview deployers
         if (isPreviewSyncNeeded || diverged) {
             try {
@@ -1629,7 +1532,7 @@ public class SiteServiceImpl implements SiteService {
 	    logger.info("Done syncing database with repository for site: " + site + " fromCommitId = " +
                 (StringUtils.isEmpty(fromCommitId) ? "Empty repo" : fromCommitId) + " with a final result of: " +
                 toReturn);
-        logger.info("Last commit ID for site: " + site + " is " + lastCommitId);
+        logger.info("Last commit ID for site: " + site + " is " + repoLastCommitId);
 
         if (!toReturn) {
 	        // Some operations failed during sync database from repo
@@ -1842,7 +1745,7 @@ public class SiteServiceImpl implements SiteService {
         if (!exists(siteId)) {
             throw new SiteNotFoundException();
         }
-        boolean toRet = contentRepository.removeRemote(siteId, remoteName);
+        boolean toRet = contentRepositoryV2.removeRemote(siteId, remoteName);
         insertRemoveRemoteAuditLog(siteId, remoteName);
         return toRet;
     }
@@ -1891,7 +1794,7 @@ public class SiteServiceImpl implements SiteService {
     }
 
     public String getEnvironment() {
-        return studioConfiguration.getProperty(CONFIGURATION_SITE_ENVIRONMENT);
+        return studioConfiguration.getProperty(CONFIGURATION_ENVIRONMENT_ACTIVE);
     }
 
     public List<String> getDefaultGroups() {
@@ -1923,13 +1826,6 @@ public class SiteServiceImpl implements SiteService {
 	}
 	public void setContentService(ContentService contentService) {
 	    this.contentService = contentService;
-	}
-
-	public SiteEnvironmentConfig getEnvironmentConfig() {
-	    return environmentConfig;
-	}
-	public void setEnvironmentConfig(SiteEnvironmentConfig environmentConfig) {
-	    this.environmentConfig = environmentConfig;
 	}
 
 	public ContentRepository getContenetRepository() {

@@ -1,10 +1,9 @@
 /*
- * Copyright (C) 2007-2019 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * it under the terms of the GNU General Public License version 3 as published by
+ * the Free Software Foundation.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -113,8 +112,20 @@ public class ApiResponse {
             new ApiResponse(12002, "Pull from remote repository resulted in conflict",
                     "Resolve conflicts before continuing work with repository", StringUtils.EMPTY);
 
+    public static final ApiResponse ADD_REMOTE_INVALID =
+            new ApiResponse(12003, "Remote is invalid. Not added to remote repositories",
+                    "Add new remote repository with valid parameters.", StringUtils.EMPTY);
+
+    public static final ApiResponse REMOVE_REMOTE_FAILED =
+            new ApiResponse(12004, "Failed to remove remote repository", "Contact your system administrator.",
+                    StringUtils.EMPTY);
+
+    public static final ApiResponse PUSH_TO_REMOTE_FAILED =
+            new ApiResponse(12005, "Push to remote repository failed", "Check your repository settings or contact your system administrator.",
+                    StringUtils.EMPTY);
+
     public static final ApiResponse MARKETPLACE_NOT_INITIALIZED = new ApiResponse(40000,
-        "Marketplace service is not initialized", "Contact your system administrator", StringUtils.EMPTY);
+        "Marketplace service is not initialized", "Contact your system administrator.", StringUtils.EMPTY);
 
     public static final ApiResponse MARKETPLACE_UNREACHABLE = new ApiResponse(40001,
         "Marketplace server is unreachable", "Check the configuration to make sure the Marketplace URL is correct",

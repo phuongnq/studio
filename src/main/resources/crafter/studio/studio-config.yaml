@@ -29,10 +29,10 @@ studio.repo.siteSandboxBranch: master
 studio.repo.defaultRemoteName: origin
 # Published git repository name under every site
 studio.repo.sitePublishedPath: published
-# If not using environment-config.xml, environments are configured here
-# Git repository branch for the `live` environment, default "live"
+# Git repository branch for publishing targets are configured here
+# Git repository branch for the `live` publishing target, default "live"
 studio.repo.published.live: live
-# Git repository branch for the `staging` environment, default "staging"
+# Git repository branch for the `staging` publishing target, default "staging"
 studio.repo.published.staging: staging
 # Blueprints folder name under global
 studio.repo.blueprintsPath: blueprints
@@ -76,6 +76,18 @@ studio.repo.pullFromRemote.conflict.notificationEnabled: false
 studio.repo.defaultIgnoreFile: crafter/studio/utils/default-gitignore
 
 ############################################################
+##                       Blob Store                       ##
+############################################################
+# Module of the blob store configuration file in the site
+studio.blob.config.module: studio
+# Location of the blob store configuration file in the site
+studio.blob.config.path: blob-stores-config.xml
+# Extension used for the blob files in the site
+studio.blob.file.extension: blob
+# Target to use for all operations
+studio.blob.publishingTarget: preview
+
+############################################################
 ##                   Site Configuration                   ##
 ############################################################
 # Location where global configuration files are stored.
@@ -108,10 +120,6 @@ studio.configuration.site.generalConfigFileName: site-config.xml
 studio.configuration.site.permissionMappingsFileName: permission-mappings-config.xml
 # File name where configuration of user role mappings is stored for a site.
 studio.configuration.site.roleMappingsFileName: role-mappings-config.xml
-# Defines name used for environment specific configuration. It is used for environment overrides in studio. Default value is local.
-studio.configuration.site.environment: local
-# File name where environment specific configuration is stored
-studio.configuration.site.environment.configFileName: environment/environment-config.xml
 # File name where configuration of content type is stored.
 studio.configuration.site.contentTypes.configFileName: config.xml
 # Default user groups when site is created
@@ -128,12 +136,18 @@ studio.configuration.default.dependencyResolver.configBasePath: /configuration/d
 studio.configuration.default.dependencyResolver.configFileName: resolver-config.xml
 # File name where dependency specific configuration is stored
 studio.configuration.site.dependencyResolver.configFileName: dependency/resolver-config.xml
+# Module of the AWS configuration
+studio.configuration.site.aws.configurationModule: studio
 # Repo path to read the AWS configuration
-studio.configuration.site.aws.configurationPath: /config/studio/aws/aws.xml
+studio.configuration.site.aws.configurationPath: aws/aws.xml
+# Module of the Box configuration
+studio.configuration.site.box.configurationModule: studio
 # Repo path to read the Box configuration
-studio.configuration.site.box.configurationPath: /config/studio/box/box.xml
+studio.configuration.site.box.configurationPath: box/box.xml
+# Module of the WebDAV configuration
+studio.configuration.site.webdav.configurationModule: studio
 # Repo path to read the WebDAV configuration
-studio.configuration.site.webdav.configurationPath: /config/studio/webdav/webdav.xml
+studio.configuration.site.webdav.configurationPath: webdav/webdav.xml
 # Regex pattern for item specific dependencies
 studio.configuration.dependency.itemSpecificPatterns: /site/components/page/.*,/static-assets/page/.*,/site/components/item/.*,/static-assets/item/.*
 # Repo path to the asset processing config
@@ -144,6 +158,8 @@ studio.configuration.site.defaultPreviewUrl: ^https?://localhost:8080/?
 studio.configuration.site.defaultAuthoringUrl: ^https?://localhost:8080/studio/?
 # Default GraphQL server URL
 studio.configuration.site.defaultGraphqlServerUrl: ^https?://localhost:8080/?
+# Path for the translation configuration file
+studio.configuration.site.translation: ${studio.configuration.site.configBasePath}/translation-config.xml
 # Studio management authorization token.
 # Please update this per installation and provide this token to the status monitors.
 studio.configuration.management.authorizationToken: defaultManagementToken
@@ -151,7 +167,7 @@ studio.configuration.management.authorizationToken: defaultManagementToken
 # Please update this per installation and provide this token to the status monitors.
 studio.configuration.management.previewAuthorizationToken: ${env:ENGINE_MANAGEMENT_TOKEN}
 # Protected URLs with preview engine management authorization token.
-# Coma separated list of preview engine urls
+# Comma separated list of preview engine urls
 studio.configuration.management.previewProtectedUrls: >-
   /api/1/monitoring/log.json,
   /api/1/monitoring/memory.json,
@@ -209,7 +225,8 @@ studio.security.ignoreRenewTokenUrls: /api/1/services/api/1/security/validate-se
 # Public URLs
 studio.security.publicUrls: >
   /api/1/services/api/1/server/get-available-languages.json,/api/1/services/api/1/server/get-ui-resource-override.json,
-  /api/2/monitoring/.+,/api/2/users/forgot_password,/api/2/users/set_password
+  /api/2/monitoring/.+,/api/2/users/forgot_password,/api/2/users/set_password,/api/1/services/api/1/security/validate-session.json,
+  /static-assets/.+,/api/2/users/validate_token
 # Defines security provider for accessing repository. Possible values:
 # db (users are stored in database)
 # ldap (users are imported from LDAP into the database)
@@ -229,7 +246,7 @@ studio.security.forgotPassword.email.template: /templates/system/email/forgotPas
 # Forgot password token time-out period in minutes
 studio.security.forgotPassword.token.timeout: 60
 # Reset password service url
-studio.security.resetPassword.serviceUrl: "#/reset-password"
+studio.security.resetPassword.serviceUrl: "login"
 # Password requirements validation regular expression
 # The supported capture group keys are:
 #   hasNumbers
@@ -241,6 +258,8 @@ studio.security.resetPassword.serviceUrl: "#/reset-password"
 #   maxLength
 #   minMaxLength
 studio.security.passwordRequirements.validationRegex: ^(?=(?<hasNumbers>.*[0-9]))(?=(?<hasLowercase>.*[a-z]))(?=(?<hasUppercase>.*[A-Z]))(?=(?<hasSpecialChars>.*[~|!`,;\/@#$%^&+=]))(?<minLength>.{8,})$
+# Delay set password API response in seconds
+studio.security.setPasswordDelay: 1
 # Studio authentication chain configuration
 studio.authentication.chain:
   # Authentication provider type
@@ -250,7 +269,7 @@ studio.authentication.chain:
     # Authentication header for secure key
     secureKeyHeader: secure_key
     # Authentication headers secure key that is expected to match secure key value from headers
-    # Typically this is placed in the header by the authentication agent, e.g. Apache mod_mellon
+    # Typically this is placed in the header by the authentication agent
     secureKeyHeaderValue: secure
     # Authentication header for username
     usernameHeader: username
@@ -269,7 +288,7 @@ studio.authentication.chain:
     # If logout is enabled for headers authenticated users (SSO), set the endpoint of the SP or IdP logout, which should
     # be called after local logout. The {baseUrl} macro is provided so that the browser is redirected back to Studio
     # after logout (https://STUDIO_SERVER:STUDIO_PORT/studio)
-    logoutUrl: /mellon/logout?ReturnTo={baseUrl}
+    logoutUrl: /YOUR_DOMAIN/logout?ReturnTo={baseUrl}
   # Authentication provider type
   - provider: LDAP
     # Authentication via LDAP enabled
@@ -308,7 +327,7 @@ studio.security.encryption.salt: default_encryption_salt
 # Amount of time (in seconds) to delay encryption response
 studio.security.encryption.delay: 1
 # Amount of characters to limit the encryption input
-studio.security.encryption.maxLength: 512
+studio.security.encryption.maxLength: 4096
 
 ###############################################################
 ##               Page Navigation Order Service               ##
@@ -453,7 +472,7 @@ studio.db.pool.maxWaitTime: 10000
 # for any reason, initializer needs to be turned on.
 studio.db.initializer.enabled: true
 # Connection string used to initialize database
-studio.db.initializer.url: jdbc:mariadb://127.0.0.1:33306?user=root&password=
+studio.db.initializer.url: jdbc:mariadb://127.0.0.1:33306?user=root&password=${env:MARIADB_ROOT_PASSWD}
 # Create schema SQL script location
 studio.db.initializer.createSchemaScriptLocation: crafter/studio/database/createSchema.sql
 # Create database SQL script location
@@ -471,7 +490,7 @@ studio.db.testOnBorrow: true
 studio.db.validationQuery: SELECT 1
 # Defines the amount of time, in seconds, that connection validation will wait for a response from the database when executing a validation query.
 # Use a value less than or equal to 0 for no timeout.
-studio.db.validationInterval: 34000
+studio.db.validationInterval: 1
 # Base folder for the embedded database
 studio.db.basePath: ${sys:crafter.bin.dir}/dbms
 # Data folder for the embedded database
@@ -596,6 +615,12 @@ studio.search.urls: http://localhost:9201
 studio.search.username: ''
 # The password for Elasticsearch
 studio.search.password: ''
+# The connection timeout in milliseconds, if set to -1 the default will be used
+studio.search.timeout.connect: -1
+# The socket timeout in milliseconds, if set to -1 the default will be used
+studio.search.timeout.socket: -1
+# The number of threads to use, if set to -1 the default will be used
+studio.search.threads: -1
 # Suffix added to the name for authoring indexes
 studio.search.index.suffix: -authoring
 # Name of the field for paths
@@ -611,7 +636,7 @@ studio.search.field.size: contentLength
 # Name of the field for mimeType
 studio.search.field.mimeType: contentType
 # List of fields to include in the search
-studio.search.fields.search: localId, internal-name, title, content, *_html, *_t, *_txt
+studio.search.fields.search: localId.text, internal-name.text, title.text, content, *_html, *_t, *_txt
 # List of fields to include for highlighting
 studio.search.fields.highlight: localId, internal-name, title, content, *_html, *_t, *_txt
 # The size of each highlight snippet
@@ -758,6 +783,8 @@ studio.webdav.url.pattern: /remote-assets/webdav/%s/%s/%s
 ##########################################################
 # Indicates if serverless delivery is enabled
 studio.serverless.delivery.enabled: false
+# Indicates if the local (preview) Deployer is going to be used for serverless deployments
+studio.serverless.delivery.deployer.local: true
 # The URL for the serverless delivery deployer create URL
 studio.serverless.delivery.deployer.target.createUrl: ${studio.preview.createTargetUrl}
 # The URL for the serverless delivery deployer delete URL
@@ -766,12 +793,10 @@ studio.serverless.delivery.deployer.target.deleteUrl: ${studio.preview.deleteTar
 studio.serverless.delivery.deployer.target.template: aws-cloudformed-s3
 # Replace existing target configuration if one exists?
 studio.serverless.delivery.deployer.target.replace: false
-# The URL the deployer will use to clone/pull the site's published repo. When the deployer is in a separate node
-# (because of clustering), this URL should be an SSH/HTTP URL to the load balancer in front of the Studios
-studio.serverless.delivery.deployer.target.remoteRepoUrl: ${env:CRAFTER_DATA_DIR}/repos/sites/{siteName}/published
-# The deployer's local path where it will store the clone of the published site. This property is not needed if
-# the deployer is not the preview deployer, so you can leave an empty string ('') instead
-studio.serverless.delivery.deployer.target.localRepoPath: ${env:CRAFTER_DATA_DIR}/repos/aws/{siteName}
+# The URL of the site repo that will be deployed. If using the local deployer, this should be the local path to the
+# published repo. If using a a Deployer in a separate node (because of clustering), this should be a load balanced
+# SSH/HTTP URL to the published repo
+studio.serverless.delivery.deployer.target.repoUrl: ${env:CRAFTER_DATA_DIR}/repos/sites/{siteName}/published
 # Parameters for the target template. Please check the deployer template documentation for the possible parameters.
 # The following parameters will be sent automatically, and you don't need to specify them: env, site_name, replace,
 # disable_deploy_cron, local_repo_path, repo_url, use_crafter_search
@@ -787,3 +812,9 @@ studio.serverless.delivery.deployer.target.template.params:
 studio.marketplace.url: https://mp.craftercms.org
 # Indicates if the search should include plugins pending of approval
 studio.marketplace.search.pending: false
+
+##################################################
+##                    Cache                     ##
+##################################################
+# If Studio should cache its FreeMarker templates
+studio.cache.templates: true

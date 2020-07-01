@@ -1,10 +1,9 @@
 /*
- * Copyright (C) 2007-2019 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * it under the terms of the GNU General Public License version 3 as published by
+ * the Free Software Foundation.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -49,6 +48,7 @@ def authenticationType = ""
 def profile = null
 def studioConfigurationSB = context.applicationContext.get("studioConfiguration")
 def passwordRequirementsRegex = studioConfigurationSB.getProperty(SECURITY_PASSWORD_REQUIREMENTS_VALIDATION_REGEX)
+def userServiceSB = context.applicationContext.get("userService")
 
 if (StringUtils.isEmpty(currentUser)) {
     def chainConfig =
@@ -68,6 +68,16 @@ if (StringUtils.isEmpty(currentUser)) {
     }
 }
 
+def authenticatedUser = null;
+
+if (!authenticationType) {
+    try {
+        authenticatedUser = userServiceSB.getCurrentUser()
+    } catch (error) {
+        // do nothing
+    }
+}
+
 try {
     profile = SecurityServices.getUserProfile(context, currentUser)
 } catch(e) {
@@ -82,6 +92,7 @@ model.username = currentUser
 model.userEmail = profile.email 
 model.userFirstName = profile.first_name
 model.userLastName =  profile.last_name
-model.authenticationType =  profile.authentication_type
+model.authenticationType =  authenticatedUser?
+        authenticatedUser.getAuthenticationType() as String : profile.authentication_type
 model.cookieDomain = StringEscapeUtils.escapeXml10(request.getServerName())
 model.passwordRequirementsRegex = passwordRequirementsRegex;

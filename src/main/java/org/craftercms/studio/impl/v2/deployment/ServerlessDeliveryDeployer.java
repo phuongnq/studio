@@ -1,10 +1,9 @@
 /*
- * Copyright (C) 2007-2019 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * it under the terms of the GNU General Public License version 3 as published by
+ * the Free Software Foundation.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -22,14 +21,7 @@ import org.springframework.web.client.RestClientException;
 
 import static org.craftercms.studio.api.v1.constant.StudioConstants.CONFIG_SITEENV_VARIABLE;
 import static org.craftercms.studio.api.v1.constant.StudioConstants.CONFIG_SITENAME_VARIABLE;
-import static org.craftercms.studio.api.v2.utils.StudioConfiguration.SERVERLESS_DELIVERY_DEPLOYER_TARGET_CREATE_URL;
-import static org.craftercms.studio.api.v2.utils.StudioConfiguration.SERVERLESS_DELIVERY_DEPLOYER_TARGET_DELETE_URL;
-import static org.craftercms.studio.api.v2.utils.StudioConfiguration.SERVERLESS_DELIVERY_DEPLOYER_TARGET_LOCAL_REPO_PATH;
-import static org.craftercms.studio.api.v2.utils.StudioConfiguration.SERVERLESS_DELIVERY_DEPLOYER_TARGET_REMOTE_REPO_URL;
-import static org.craftercms.studio.api.v2.utils.StudioConfiguration.SERVERLESS_DELIVERY_DEPLOYER_TARGET_REPLACE;
-import static org.craftercms.studio.api.v2.utils.StudioConfiguration.SERVERLESS_DELIVERY_DEPLOYER_TARGET_TEMPLATE;
-import static org.craftercms.studio.api.v2.utils.StudioConfiguration.SERVERLESS_DELIVERY_DEPLOYER_TARGET_TEMPLATE_PARAMS;
-import static org.craftercms.studio.api.v2.utils.StudioConfiguration.SERVERLESS_DELIVERY_ENABLED;
+import static org.craftercms.studio.api.v2.utils.StudioConfiguration.*;
 
 /**
  * Implementation of {@link org.craftercms.studio.api.v2.deployment.Deployer} that interacts with the Serverless
@@ -44,11 +36,18 @@ public class ServerlessDeliveryDeployer extends AbstractDeployer {
     @Override
     public void createTargets(String site, String searchEngine) throws RestClientException {
         if (isServerlessDeliveryEnabled()) {
-            String localRepoPath = getRepoUrl(SERVERLESS_DELIVERY_DEPLOYER_TARGET_LOCAL_REPO_PATH, site);
-            String repoUrl = getRepoUrl(SERVERLESS_DELIVERY_DEPLOYER_TARGET_REMOTE_REPO_URL, site);
+            String repoUrl = null;
+            String localRepoPath = null;
+
+            if (studioConfiguration.getProperty(SERVERLESS_DELIVERY_LOCAL_DEPLOYER, Boolean.class, true)) {
+                localRepoPath = getRepoUrl(SERVERLESS_DELIVERY_DEPLOYER_TARGET_REPO_URL, site);
+            } else {
+                repoUrl = getRepoUrl(SERVERLESS_DELIVERY_DEPLOYER_TARGET_REPO_URL, site);
+            }
+
             String template = studioConfiguration.getProperty(SERVERLESS_DELIVERY_DEPLOYER_TARGET_TEMPLATE);
-            boolean replace = studioConfiguration.getProperty(SERVERLESS_DELIVERY_DEPLOYER_TARGET_REPLACE,
-                                                              Boolean.class, false);
+            boolean replace = studioConfiguration.getProperty(
+                    SERVERLESS_DELIVERY_DEPLOYER_TARGET_REPLACE, Boolean.class, false);
             HierarchicalConfiguration<ImmutableNode> templateParams =
                     studioConfiguration.getSubConfig(SERVERLESS_DELIVERY_DEPLOYER_TARGET_TEMPLATE_PARAMS);
 

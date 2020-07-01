@@ -91,6 +91,7 @@ package org.craftercms.studio.api.v1.constant;
 	String BOOTSTRAP_REPO_GLOBAL_PATH = "global";		// Path to the global repository inside the bootstrap repo
     String CONFIG_SITENAME_VARIABLE = "\\{siteName\\}";
     String CONFIG_SITEENV_VARIABLE = "\\{siteEnv\\}";
+    String IN_PROGRESS_BRANCH_NAME_SUFFIX = "_in_progress";
 
     /**
      * Site Constants
@@ -163,6 +164,11 @@ package org.craftercms.studio.api.v1.constant;
     String SITE_CONFIG_XML_ELEMENT_LIVE_ENVIRONMENT = "live-environment";
     String SITE_CONFIG_ELEMENT_SANDBOX_BRANCH = "sandbox-branch";
     String SITE_CONFIG_ELEMENT_PLUGIN_FOLDER_PATTERN = "plugin-folder-pattern";
+    String SITE_CONFIG_ELEMENT_SITE_URLS = "site-urls";
+    String SITE_CONFIG_ELEMENT_AUTHORING_URL = "authoring-url";
+    String SITE_CONFIG_ELEMENT_STAGING_URL = "staging-url";
+    String SITE_CONFIG_ELEMENT_LIVE_URL = "live-url";
+    String SITE_CONFIG_ELEMENT_ADMIN_EMAIL_ADDRESS = "admin-email-address";
 
     /**
      * Repository commit messages variables
@@ -195,4 +201,6 @@ package org.craftercms.studio.api.v1.constant;
     /* Modules */
     String MODULE_STUDIO = "studio";
     String MODULE_ENGINE = "engine";
+
+    String DEFAULT_CONFIG_URL = "http://localhost:8080";
 }

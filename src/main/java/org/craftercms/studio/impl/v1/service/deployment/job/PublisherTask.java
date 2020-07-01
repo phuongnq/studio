@@ -1,10 +1,9 @@
 /*
- * Copyright (C) 2007-2019 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * it under the terms of the GNU General Public License version 3 as published by
+ * the Free Software Foundation.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -25,15 +24,14 @@ import org.craftercms.studio.api.v1.exception.ServiceLayerException;
 import org.craftercms.studio.api.v1.exception.SiteNotFoundException;
 import org.craftercms.studio.api.v1.log.Logger;
 import org.craftercms.studio.api.v1.log.LoggerFactory;
-import org.craftercms.studio.api.v1.repository.ContentRepository;
 import org.craftercms.studio.api.v1.service.configuration.ServicesConfig;
 import org.craftercms.studio.api.v1.service.deployment.DeploymentException;
 import org.craftercms.studio.api.v1.service.deployment.PublishingManager;
 import org.craftercms.studio.api.v1.service.site.SiteService;
 import org.craftercms.studio.api.v1.to.DeploymentItemTO;
-import org.craftercms.studio.api.v1.to.PublishingTargetTO;
 import org.craftercms.studio.api.v2.dal.AuditLog;
-import org.craftercms.studio.api.v2.dal.AuditLogParamter;
+import org.craftercms.studio.api.v2.dal.AuditLogParameter;
+import org.craftercms.studio.api.v2.repository.ContentRepository;
 import org.craftercms.studio.api.v2.service.audit.internal.AuditServiceInternal;
 import org.craftercms.studio.api.v2.service.notification.NotificationService;
 import org.craftercms.studio.api.v2.utils.StudioConfiguration;
@@ -205,26 +203,16 @@ public class PublisherTask implements Runnable {
                 }
             }
         } catch (IOException e) {
-            logger.info("Invaid site UUID. Local copy will not be deleted");
+            logger.info("Invalid site UUID. Local copy will not be deleted");
         }
         return toRet;
     }
 
     private Set<String> getAllPublishingEnvironments(String site) {
         Set<String> environments = new HashSet<String>();
+        environments.add(servicesConfig.getLiveEnvironment(site));
         if (servicesConfig.isStagingEnvironmentEnabled(site)) {
-            environments.add(servicesConfig.getLiveEnvironment(site));
             environments.add(servicesConfig.getStagingEnvironment(site));
-        } else {
-            List<PublishingTargetTO> publishingTargets = siteService.getPublishingTargetsForSite(site);
-
-            if (publishingTargets != null && publishingTargets.size() > 0) {
-                for (PublishingTargetTO target : publishingTargets) {
-                    if (StringUtils.isNotEmpty(target.getRepoBranchName())) {
-                        environments.add(target.getRepoBranchName());
-                    }
-                }
-            }
         }
         return environments;
     }
@@ -404,15 +392,15 @@ public class PublisherTask implements Runnable {
         auditLog.setPrimaryTargetId(site + ":" + environment);
         auditLog.setPrimaryTargetType(TARGET_TYPE_CONTENT_ITEM);
         auditLog.setPrimaryTargetValue(environment);
-        List<AuditLogParamter> auditLogParamters = new ArrayList<AuditLogParamter>();
+        List<AuditLogParameter> auditLogParameters = new ArrayList<AuditLogParameter>();
         for (String packageId : packageIds) {
-            AuditLogParamter auditLogParamter = new AuditLogParamter();
-            auditLogParamter.setTargetId(site + ":" + environment);
-            auditLogParamter.setTargetType(TARGET_TYPE_CONTENT_ITEM);
-            auditLogParamter.setTargetValue(packageId);
-            auditLogParamters.add(auditLogParamter);
+            AuditLogParameter auditLogParameter = new AuditLogParameter();
+            auditLogParameter.setTargetId(site + ":" + environment);
+            auditLogParameter.setTargetType(TARGET_TYPE_CONTENT_ITEM);
+            auditLogParameter.setTargetValue(packageId);
+            auditLogParameters.add(auditLogParameter);
         }
-        auditLog.setParameters(auditLogParamters);
+        auditLog.setParameters(auditLogParameters);
         auditServiceInternal.insertAuditLog(auditLog);
     }
 

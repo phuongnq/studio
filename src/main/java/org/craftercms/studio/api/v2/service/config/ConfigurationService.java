@@ -1,10 +1,9 @@
 /*
- * Copyright (C) 2007-2019 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * it under the terms of the GNU General Public License version 3 as published by
+ * the Free Software Foundation.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -19,6 +18,7 @@ package org.craftercms.studio.api.v2.service.config;
 import org.craftercms.studio.api.v1.exception.ContentNotFoundException;
 import org.craftercms.studio.api.v1.exception.ServiceLayerException;
 import org.craftercms.studio.api.v2.exception.ConfigurationException;
+import org.craftercms.studio.model.config.TranslationConfiguration;
 import org.craftercms.studio.model.rest.ConfigurationHistory;
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
@@ -74,7 +74,7 @@ public interface ConfigurationService {
      * Get configuration from global repository as String
      *
      * @param path path of configuration file
-     * @return
+     * @return String content of configuration file
      */
     String getGlobalConfiguration(String path);
 
@@ -122,4 +122,12 @@ public interface ConfigurationService {
      * @throws ServiceLayerException
      */
     void writeGlobalConfiguration(String path, InputStream content) throws ServiceLayerException;
+
+    /**
+     * Get the translation configuration for a given site
+     * @param siteId the id of the site
+     * @return the translation configuration
+     */
+    TranslationConfiguration getTranslationConfiguration(String siteId) throws ServiceLayerException;
+
 }

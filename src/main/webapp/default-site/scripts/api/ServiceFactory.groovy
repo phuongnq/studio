@@ -1,10 +1,9 @@
 /*
- * Copyright (C) 2007-2019 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * it under the terms of the GNU General Public License version 3 as published by
+ * the Free Software Foundation.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -30,6 +29,7 @@ import scripts.api.impl.site.SpringSiteServices
 import scripts.api.impl.dependency.SpringDependencyServices
 import scripts.api.impl.objectstate.SpringObjectStateServices
 import scripts.api.impl.cmis.SpringCmisServices
+import scripts.api.impl.user.SpringUserServices
 
 /**
  * Class is a factory used by the API wrappers to find their implementation
@@ -167,4 +167,14 @@ class ServiceFactory {
     static getCmisServices(context) {
         return new SpringCmisServices(context)
     }
+	/**
+	 * return the implementation for user services
+	 *
+	 * @param context site context
+	 * @return User Services
+	 */
+	static getUserServices(context) {
+		return new SpringUserServices(context)
+	}
+
 }
